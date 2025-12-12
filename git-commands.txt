@@ -22,3 +22,4 @@ git remote add origin https://github.com/Hiroki-Web-Lab/uriage_data_toridasi.git
 # 7. GitHubにアップロード
 git push -u origin main
 
+
