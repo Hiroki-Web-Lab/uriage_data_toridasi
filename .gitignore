@@ -1,0 +1,29 @@
+# 依存関係
+node_modules/
+
+# ログファイル
+*.log
+
+# 環境変数
+.env
+
+# OS関連
+.DS_Store
+Thumbs.db
+
+# エディタ関連
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 出力ファイル（必要に応じて）
+*.csv
+*.json
+*.zip
+
+
+
+
+
+

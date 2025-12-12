@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>売上データ取り込み</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: #111827;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.15);
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --danger: #f97373;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: radial-gradient(circle at top, #1e293b 0, #020617 55%);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .app {
+        width: 100%;
+        max-width: 640px;
+      }
+
+      .card {
+        background: linear-gradient(145deg, #020617, #020617 40%, #020617);
+        border-radius: 18px;
+        padding: 24px 24px 20px;
+        position: relative;
+        box-shadow:
+          0 18px 45px rgba(0, 0, 0, 0.7),
+          0 0 0 1px rgba(148, 163, 184, 0.08);
+      }
+
+      .card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        padding: 1px;
+        background: linear-gradient(
+          135deg,
+          rgba(56, 189, 248, 0.9),
+          rgba(129, 140, 248, 0.2),
+          rgba(45, 212, 191, 0.6)
+        );
+        mask:
+          linear-gradient(#000 0 0) content-box,
+          linear-gradient(#000 0 0);
+        mask-composite: exclude;
+        opacity: 0.9;
+        pointer-events: none;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .title-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+      }
+
+      .subtitle {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .badge {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        font-size: 0.78rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #4ade80;
+        box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.15);
+      }
+
+      .form-grid {
+        display: grid;
+        gap: 14px;
+        margin-bottom: 10px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .label-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+      }
+
+      label {
+        font-size: 0.84rem;
+        font-weight: 500;
+        color: #e5e7eb;
+      }
+
+      .label-hint {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      select,
+      input[type="text"] {
+        width: 100%;
+        padding: 9px 11px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.55);
+        background: rgba(15, 23, 42, 0.95);
+        color: var(--text);
+        font-size: 0.9rem;
+        outline: none;
+        transition:
+          border-color 0.16s ease,
+          box-shadow 0.16s ease,
+          background 0.16s ease,
+          transform 0.08s ease;
+        appearance: none;
+      }
+
+      select:focus,
+      input[type="text"]:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.5);
+        background: rgba(15, 23, 42, 1);
+        transform: translateY(-0.5px);
+      }
+
+      input::placeholder {
+        color: rgba(148, 163, 184, 0.7);
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-top: 8px;
+      }
+
+      .status-note {
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+
+      .primary-button {
+        position: relative;
+        border: none;
+        border-radius: 999px;
+        padding: 10px 22px;
+        font-size: 0.92rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #0b1120;
+        background: linear-gradient(135deg, #38bdf8, #22c55e);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow:
+          0 10px 25px rgba(8, 47, 73, 0.65),
+          0 0 0 1px rgba(15, 23, 42, 0.7);
+        overflow: hidden;
+      }
+
+      .primary-button span {
+        position: relative;
+        z-index: 1;
+      }
+
+      .primary-button::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(120deg, #7dd3fc, #6ee7b7);
+        opacity: 0;
+        transition: opacity 0.16s ease;
+      }
+
+      .primary-button:hover::before {
+        opacity: 0.16;
+      }
+
+      .primary-button:hover {
+        transform: translateY(-1px);
+        box-shadow:
+          0 14px 32px rgba(8, 47, 73, 0.8),
+          0 0 0 1px rgba(15, 23, 42, 0.8);
+      }
+
+      .primary-button:active {
+        transform: translateY(0);
+        box-shadow:
+          0 8px 18px rgba(8, 47, 73, 0.8),
+          0 0 0 1px rgba(15, 23, 42, 0.9);
+      }
+
+      .primary-button[disabled] {
+        opacity: 0.7;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      .button-icon {
+        width: 14px;
+        height: 14px;
+      }
+
+      .toast {
+        position: fixed;
+        inset-inline: 0;
+        bottom: 14px;
+        display: flex;
+        justify-content: center;
+        pointer-events: none;
+      }
+
+      .toast-inner {
+        min-width: 260px;
+        max-width: 420px;
+        background: rgba(15, 23, 42, 0.98);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid rgba(148, 163, 184, 0.6);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.9);
+        pointer-events: auto;
+      }
+
+      .toast-badge {
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 1);
+        border: 1px solid rgba(148, 163, 184, 0.6);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+      }
+
+      .toast-text {
+        color: var(--muted);
+      }
+
+      .toast-strong {
+        color: var(--text);
+        font-weight: 500;
+      }
+
+      .error {
+        color: var(--danger);
+      }
+
+      @media (max-width: 640px) {
+        .card {
+          padding: 18px 16px 16px;
+        }
+
+        .title {
+          font-size: 1.1rem;
+        }
+
+        .field-row {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .actions {
+          flex-direction: column-reverse;
+          align-items: stretch;
+        }
+
+        .primary-button {
+          justify-content: center;
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="card">
+        <div class="header">
+          <div class="title-group">
+            <div class="title">売上データ取り込み</div>
+            <div class="subtitle">期間と店舗を選んで CSV を一括ダウンロード</div>
+          </div>
+          <div class="badge">
+            <span class="badge-dot"></span>
+            <span>ローカル実行</span>
+          </div>
+        </div>
+
+        <form id="importForm" method="post" action="/download">
+          <div class="form-grid">
+            <div class="field-row">
+              <div class="field">
+                <div class="label-row">
+                  <label for="period">期間</label>
+                  <span class="label-hint">対象の月</span>
+                </div>
+                <select id="period" name="period">
+                  <option value="this">今月</option>
+                  <option value="last">先月</option>
+                  <option value="custom">任意</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <div class="label-row">
+                  <label for="store">店舗</label>
+                  <span class="label-hint">複数店舗も一括取得</span>
+                </div>
+                <select id="store" name="store">
+                  <option value="all">全店舗（2,4,5,7,50）</option>
+                  <option value="hatta">八田店（ID 2）</option>
+                  <option value="matsushima">松島店（ID 4）</option>
+                  <option value="koga">古賀店（ID 5）</option>
+                  <option value="tosu">鳥栖店（ID 7）</option>
+                  <option value="noge">野芥店（ID 50）</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row" id="customPeriodRow" style="display: none;">
+              <div class="field">
+                <div class="label-row">
+                  <label for="customYear">年</label>
+                </div>
+                <select id="customYear" name="customYear">
+                  <!-- JavaScriptで動的に生成 -->
+                </select>
+              </div>
+              <div class="field">
+                <div class="label-row">
+                  <label for="customMonth">月</label>
+                </div>
+                <select id="customMonth" name="customMonth">
+                  <option value="01">1月</option>
+                  <option value="02">2月</option>
+                  <option value="03">3月</option>
+                  <option value="04">4月</option>
+                  <option value="05">5月</option>
+                  <option value="06">6月</option>
+                  <option value="07">7月</option>
+                  <option value="08">8月</option>
+                  <option value="09">9月</option>
+                  <option value="10">10月</option>
+                  <option value="11">11月</option>
+                  <option value="12">12月</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label-row">
+                <label for="phpsessid">PHPSESSID</label>
+                <span class="label-hint">ログイン後にブラウザからコピー</span>
+              </div>
+              <input
+                id="phpsessid"
+                name="phpsessid"
+                type="text"
+                placeholder="例: 481ba121fb0c131cb9727bdbcb7e9fa8"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <label
+                style="
+                  margin-top: 6px;
+                  font-size: 0.78rem;
+                  color: var(--muted);
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 6px;
+                  cursor: pointer;
+                "
+              >
+                <input
+                  id="rememberSession"
+                  type="checkbox"
+                  style="width: 13px; height: 13px"
+                />
+                このブラウザに PHPSESSID を保存する（共有PCではオフ推奨）
+              </label>
+            </div>
+          </div>
+
+          <div class="actions">
+            <div class="status-note" id="statusNote">
+              取り込みボタンを押すと ZIP ファイルをダウンロードします。
+            </div>
+            <button class="primary-button" type="submit" id="submitBtn">
+              <span class="button-icon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M4 10.5L8.2 14.7C8.64 15.14 9.36 15.14 9.8 14.7L16 8.5"
+                    stroke="#0b1120"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M12 4H5.5C4.67157 4 4 4.67157 4 5.5V12"
+                    stroke="#0b1120"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+              <span>取り込み</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="toast" id="toast" style="display: none">
+        <div class="toast-inner" id="toastInner">
+          <div class="toast-badge" id="toastBadge">i</div>
+          <div class="toast-text" id="toastText">
+            <span class="toast-strong">ヒント:</span>
+            ブラウザの開発者ツールから PHPSESSID をコピーしてください。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const form = document.getElementById("importForm");
+      const submitBtn = document.getElementById("submitBtn");
+      const statusNote = document.getElementById("statusNote");
+      const phpsessidInput = document.getElementById("phpsessid");
+      const toast = document.getElementById("toast");
+      const toastText = document.getElementById("toastText");
+      const toastBadge = document.getElementById("toastBadge");
+      const toastInner = document.getElementById("toastInner");
+      const rememberSession = document.getElementById("rememberSession");
+      const periodSelect = document.getElementById("period");
+      const customPeriodRow = document.getElementById("customPeriodRow");
+      const customYear = document.getElementById("customYear");
+      const customMonth = document.getElementById("customMonth");
+
+      // 年の選択肢を生成（現在年±5年）
+      (() => {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+          const option = document.createElement("option");
+          option.value = i;
+          option.textContent = `${i}年`;
+          if (i === currentYear) {
+            option.selected = true;
+          }
+          customYear.appendChild(option);
+        }
+      })();
+
+      // 期間が「任意」のときだけ年・月の選択を表示
+      periodSelect.addEventListener("change", () => {
+        if (periodSelect.value === "custom") {
+          customPeriodRow.style.display = "grid";
+        } else {
+          customPeriodRow.style.display = "none";
+        }
+      });
+
+      function showToast(message, { error = false } = {}) {
+        toastText.innerHTML = message;
+        toast.style.display = "flex";
+        if (error) {
+          toastBadge.textContent = "!";
+          toastInner.classList.add("error");
+        } else {
+          toastBadge.textContent = "i";
+          toastInner.classList.remove("error");
+        }
+        setTimeout(() => {
+          toast.style.display = "none";
+        }, 5000);
+      }
+
+      // 起動時に、保存済み PHPSESSID を読み込む
+      (() => {
+        try {
+          const saved = window.localStorage.getItem("uriage_phpsessid");
+          if (saved) {
+            phpsessidInput.value = saved;
+            rememberSession.checked = true;
+            statusNote.textContent =
+              "保存済みの PHPSESSID を自動入力しました。必要に応じて上書きしてください。";
+          }
+        } catch (_) {
+          // localStorage が使えない環境では何もしない
+        }
+      })();
+
+      form.addEventListener("submit", (e) => {
+        if (!phpsessidInput.value.trim()) {
+          e.preventDefault();
+          phpsessidInput.focus();
+          showToast(
+            '<span class="toast-strong">PHPSESSID</span> を入力してください。',
+            { error: true }
+          );
+          return;
+        }
+
+        // 「任意」が選択されている場合、年・月の値が入力されているか確認
+        if (periodSelect.value === "custom") {
+          if (!customYear.value || !customMonth.value) {
+            e.preventDefault();
+            showToast(
+              '<span class="toast-strong">年と月</span> を選択してください。',
+              { error: true }
+            );
+            return;
+          }
+        }
+
+        // チェックONなら PHPSESSID を保存、OFFなら削除
+        try {
+          if (rememberSession.checked) {
+            window.localStorage.setItem(
+              "uriage_phpsessid",
+              phpsessidInput.value.trim()
+            );
+          } else {
+            window.localStorage.removeItem("uriage_phpsessid");
+          }
+        } catch (_) {
+          // 保存に失敗しても処理は続行
+        }
+
+        statusNote.textContent = "取り込み中です… ブラウザの保存ダイアログをお待ちください。";
+        submitBtn.disabled = true;
+        setTimeout(() => {
+          submitBtn.disabled = false;
+          statusNote.textContent =
+            "完了後、ダウンロードした ZIP を展開して CSV をご利用ください。";
+        }, 3000);
+      });
+    </script>
+  </body>
+</html>
+
+
