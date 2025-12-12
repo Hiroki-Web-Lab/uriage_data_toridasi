@@ -1,0 +1,24 @@
+# GitHubアップロード用コマンド
+# 以下のコマンドをPowerShellで順番に実行してください
+
+# 1. プロジェクトフォルダに移動（既にこのフォルダにいる場合は不要）
+cd "D:\Hiroki\Dropbox\バイブコーディング\売上データ取り出し"
+
+# 2. Gitリポジトリを初期化
+git init
+
+# 3. すべてのファイルを追加
+git add .
+
+# 4. 初回コミット
+git commit -m "初回コミット: 売上データ取り出しツール"
+
+# 5. メインブランチを設定
+git branch -M main
+
+# 6. リモートリポジトリを追加
+git remote add origin https://github.com/Hiroki-Web-Lab/uriage_data_toridasi.git
+
+# 7. GitHubにアップロード
+git push -u origin main
+
