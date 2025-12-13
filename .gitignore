@@ -18,9 +18,16 @@ Thumbs.db
 *.swo
 
 # 出力ファイル（必要に応じて）
-*.csv
-*.json
-*.zip
+# ※ 注意: *.json を無差別に除外すると package.json / package-lock.json まで除外されて
+# デプロイが壊れます。出力ファイルだけを対象にします。
+uriage_*.csv
+uriage_*.json
+uriage_*.zip
+
+# 依存定義は必ず追跡する（上のパターンや過去設定で除外されても確実に含める）
+!package.json
+!package-lock.json
+
 
 
 
