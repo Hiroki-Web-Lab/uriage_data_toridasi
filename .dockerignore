@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+yarn-error.log
+.git
+.github
+.vscode
+.idea
+
+*.log
+*.csv
+*.json
+*.zip
+
+.env
+
+
