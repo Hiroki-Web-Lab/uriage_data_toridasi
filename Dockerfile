@@ -2,12 +2,11 @@ FROM node:18-slim
 
 WORKDIR /app
 
-# Install deps first for better layer caching
-COPY package*.json ./
-RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
-
-# Copy source
+# Copy source first (Railwayのビルドコンテキスト差異で package.json が欠ける事故を避ける)
 COPY . .
+
+# Install deps
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 
 ENV NODE_ENV=production
 
