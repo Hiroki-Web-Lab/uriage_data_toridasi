@@ -6,7 +6,16 @@ WORKDIR /app
 COPY . .
 
 # Install deps
-RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
+RUN set -eux; \
+  echo "== Build context snapshot =="; \
+  ls -la; \
+  if [ ! -f package.json ]; then \
+    echo "ERROR: /app/package.json が見つかりません。Railwayの Settings → Source → Root Directory がリポジトリ直下（空 or '.'）になっているか確認してください。"; \
+    echo "package.json candidates:"; \
+    find . -maxdepth 4 -name package.json -print || true; \
+    exit 1; \
+  fi; \
+  if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi
 
 ENV NODE_ENV=production
 

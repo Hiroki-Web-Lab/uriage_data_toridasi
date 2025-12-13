@@ -58,6 +58,8 @@ Railwayの自動ビルドが外部ツール（`caddy`）の取得で落ちるこ
 
 1. リポジトリに `Dockerfile` と `.dockerignore` があることを確認（本プロジェクトは追加済み）
 2. Railwayの該当サービスで **Build設定を Dockerfile に変更**
+   - **Dockerfile Path** は `Dockerfile`（先頭の `/` は付けない）
+3. Railwayの **Settings → Source** にある **Root Directory** が、リポジトリ直下（空欄 or `.`）になっているか確認
 3. **Redeploy（再デプロイ）** を実行
 
 ---
