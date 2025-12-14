@@ -143,6 +143,20 @@ async function unzipCsvFiles(zipArrayBuffer) {
   return files;
 }
 
+function decodeCsvBytes(bytes) {
+  // ZIP内CSVは Shift_JIS の可能性が高い。まず shift-jis を試し、失敗したら utf-8。
+  const tryDecoders = ["shift-jis", "shift_jis", "sjis", "utf-8"];
+  for (const enc of tryDecoders) {
+    try {
+      return new TextDecoder(enc).decode(bytes);
+    } catch (_) {
+      // continue
+    }
+  }
+  // 最後の手段
+  return new TextDecoder().decode(bytes);
+}
+
 async function autoImportFlow() {
   setBusy(true);
   setStatus("ZIPダウンロード開始中…");
@@ -175,11 +189,17 @@ zipPicker?.addEventListener("change", async () => {
     setStatus("ZIPを解凍中…");
     const buf = await zipFile.arrayBuffer();
     const csvFiles = await unzipCsvFiles(buf);
-    setStatus(`CSV ${csvFiles.length}件を年間予算へ投入中…`);
+    // bytesのままだと渡し先で空になる環境があるため、テキストとして渡す
+    const csvTexts = csvFiles.map((f) => ({
+      name: f.name,
+      text: decodeCsvBytes(new Uint8Array(f.bytes)),
+    }));
+
+    setStatus(`CSV ${csvTexts.length}件を年間予算へ投入中…`);
 
     const resp = await chrome.runtime.sendMessage({
       type: "IMPORT_TO_ANNUAL_BUDGET",
-      files: csvFiles,
+      files: csvTexts,
     });
     if (!resp?.ok) {
       setStatus(resp?.error ?? "投入に失敗しました。", { error: true });

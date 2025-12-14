@@ -190,18 +190,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
             const dt = new DataTransfer();
             for (const f of files) {
-              // 売上取り出し側のCSVは Shift_JIS の可能性が高いので、annual-budget取り込み用にUTF-8へ変換する
-              const bytes = new Uint8Array(f.bytes);
-              let csvBytes = bytes;
-              try {
-                const text = new TextDecoder("shift_jis").decode(bytes);
-                csvBytes = new TextEncoder().encode(text);
-              } catch {
-                // TextDecoderが対応していない環境等ではそのまま投入
-                csvBytes = bytes;
+              if (!f?.name || typeof f?.text !== "string") {
+                throw new Error("投入データ形式が不正です（name/textが必要）");
               }
-
-              dt.items.add(new File([csvBytes], f.name, { type: "text/csv" }));
+              // annual-budget側は File.text() で読むので、UTF-8のテキストとして渡すのが最も安定
+              dt.items.add(new File([f.text], f.name, { type: "text/csv" }));
             }
 
             // ファイル投入 → change発火
