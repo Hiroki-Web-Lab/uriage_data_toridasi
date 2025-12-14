@@ -190,8 +190,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
             const dt = new DataTransfer();
             for (const f of files) {
+              // 売上取り出し側のCSVは Shift_JIS の可能性が高いので、annual-budget取り込み用にUTF-8へ変換する
               const bytes = new Uint8Array(f.bytes);
-              dt.items.add(new File([bytes], f.name, { type: "text/csv" }));
+              let csvBytes = bytes;
+              try {
+                const text = new TextDecoder("shift_jis").decode(bytes);
+                csvBytes = new TextEncoder().encode(text);
+              } catch {
+                // TextDecoderが対応していない環境等ではそのまま投入
+                csvBytes = bytes;
+              }
+
+              dt.items.add(new File([csvBytes], f.name, { type: "text/csv" }));
             }
 
             // ファイル投入 → change発火
