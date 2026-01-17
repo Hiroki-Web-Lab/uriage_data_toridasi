@@ -1,5 +1,5 @@
 const DEFAULTS = {
-  uriageAppUrl: "https://uriage-scraper-production.up.railway.app/",
+  uriageAppUrl: "https://uriage-data-toridasi.onrender.com/",
   annualBudgetUrl: "https://annual-budget-nybz.vercel.app/summary",
 };
 
@@ -22,7 +22,10 @@ async function getSettings() {
 function isAllowedTargetUrl(url) {
   try {
     const u = new URL(url);
-    return u.protocol === "https:" && u.hostname.endsWith(".up.railway.app");
+    return (
+      u.protocol === "https:" &&
+      (u.hostname.endsWith(".up.railway.app") || u.hostname.endsWith(".onrender.com"))
+    );
   } catch {
     return false;
   }
@@ -73,7 +76,7 @@ async function getOrOpenUriageTab() {
   const { uriageAppUrl } = await getSettings();
   if (!isAllowedTargetUrl(uriageAppUrl)) {
     throw new Error(
-      `設定URLが許可ドメインではありません: ${uriageAppUrl}（*.up.railway.app のURLを設定してください）`
+      `設定URLが許可ドメインではありません: ${uriageAppUrl}（*.up.railway.app または *.onrender.com のURLを設定してください）`
     );
   }
   return await ensureTab(uriageAppUrl);
@@ -138,11 +141,102 @@ async function injectAndRun(tabId, { phpsessid, submit }) {
   });
 }
 
+async function readUriageFormParams(tabId) {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: () => {
+      const periodEl = document.getElementById("period");
+      const storeEl = document.getElementById("store");
+      const customYearEl = document.getElementById("customYear");
+      const customMonthEl = document.getElementById("customMonth");
+
+      const period = String(periodEl?.value || "this");
+      const store = String(storeEl?.value || "all");
+      const customYear = String(customYearEl?.value || "");
+      const customMonth = String(customMonthEl?.value || "");
+
+      return { period, store, customYear, customMonth };
+    },
+  });
+
+  return results?.[0]?.result ?? {
+    period: "this",
+    store: "all",
+    customYear: "",
+    customMonth: "",
+  };
+}
+
+async function fetchZipFromUriageApp({ phpsessid, uriageAppUrl, params }) {
+  const downloadUrl = new URL("/download", uriageAppUrl).toString();
+
+  const bodyParams = new URLSearchParams({
+    period: params.period || "this",
+    store: params.store || "all",
+    phpsessid,
+  });
+  if (params.period === "custom") {
+    if (params.customYear) bodyParams.set("customYear", String(params.customYear));
+    if (params.customMonth) bodyParams.set("customMonth", String(params.customMonth));
+  }
+
+  const res = await fetch(downloadUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+    },
+    body: bodyParams.toString(),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `ZIP取得に失敗しました（HTTP ${res.status}）${text ? `: ${text}` : ""}`
+    );
+  }
+
+  return await res.arrayBuffer();
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   (async () => {
     try {
       if (!msg?.type) {
         sendResponse({ ok: false, error: "不正なメッセージです。" });
+        return;
+      }
+
+      if (msg.type === "FETCH_ZIP_FROM_URIAGE_APP") {
+        const phpsessid = await getPhpSessId();
+        if (!phpsessid) {
+          sendResponse({
+            ok: false,
+            error:
+              "PHPSESSIDが取得できません（未ログイン/セッション切れの可能性）。先に https://hakataya.xsrv.jp にログインしてください。",
+          });
+          return;
+        }
+
+        const tab = (await findTargetTab()) ?? (await getOrOpenUriageTab());
+        if (!tab?.id) {
+          sendResponse({
+            ok: false,
+            error:
+              "取り込みアプリのタブが見つかりません。先に Railway アプリ（https://xxxxx.up.railway.app）を開いてください。",
+          });
+          return;
+        }
+
+        const { uriageAppUrl } = await getSettings();
+        const params = await readUriageFormParams(tab.id);
+        const zip = await fetchZipFromUriageApp({ phpsessid, uriageAppUrl, params });
+
+        sendResponse({
+          ok: true,
+          // ArrayBuffer を runtime message で返すと環境によって型が崩れるため、数値配列にして安定化する
+          zip: Array.from(new Uint8Array(zip)),
+          message: "ZIPを取得しました。",
+        });
         return;
       }
 
